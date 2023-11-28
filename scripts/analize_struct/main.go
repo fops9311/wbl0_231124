@@ -58,7 +58,7 @@ var TESTJSON = `{
 	"oof_shard": "1"
   }
 `
-var structs = "package main\n"
+var structs = "package data\n"
 
 func apnd(s string) {
 	structs += s
@@ -69,20 +69,21 @@ func c(m1 interface{}, id string) {
 		//defer apnd(fmt.Sprintf("//--------------map[string]interface{}-%s------------\n", id))
 
 		defer apnd(fmt.Sprintf("}\n"))
+		defer apnd(fmt.Sprintf("LocalID string `json:\"-\"`\n"))
 		for k, v := range m {
 			StructElemName := toCammelCase(k)
 			StructElemType := fmt.Sprintf("%T", v)
 			StructElemJsonName := k
 			if StructElemType == "map[string]interface {}" {
-				StructElemType = fmt.Sprintf("raw%sData", StructElemName)
+				StructElemType = fmt.Sprintf("Raw%sData", StructElemName)
 			}
 			if StructElemType == "[]interface {}" {
-				StructElemType = fmt.Sprintf("[]raw%sData", StructElemName)
+				StructElemType = fmt.Sprintf("[]Raw%sData", StructElemName)
 			}
 			defer apnd(fmt.Sprintf("	%s %s `json:\"%s\"`\n", StructElemName, StructElemType, StructElemJsonName))
 			c(v, k)
 		}
-		defer apnd(fmt.Sprintf("type raw%sData struct{\n", toCammelCase(id)))
+		defer apnd(fmt.Sprintf("type Raw%sData struct{\n", toCammelCase(id)))
 		defer apnd(fmt.Sprintf("//GENERATED json %s data\n", id))
 	case []interface{}:
 		for _, v := range m {
@@ -98,7 +99,7 @@ func main() {
 	json.Unmarshal([]byte(TESTJSON), &data)
 	c(data, "Order")
 	structs = strings.ReplaceAll(structs, "float64", "int")
-	os.WriteFile(filepath.Join(".", "jsonorder.go"), []byte(structs), 0644)
+	os.WriteFile(filepath.Join(".", "data", "jsonorder.go"), []byte(structs), 0644)
 
 }
 func capitalize(s string) string {

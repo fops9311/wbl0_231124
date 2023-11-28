@@ -1,65 +1,191 @@
-//go:generate go run .\scripts\analize_struct\.
+//go:generate go run ./scripts/analize_struct/.
+//go:generate docker build -t wb_nats_demo:latest .
+//go:generate docker-compose down
+//go:generate docker-compose up --remove-orphans -d
 package main
 
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	data "github.com/fops9311/wbl0_231124/data"
+	"github.com/nats-io/nats.go"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-var TESTJSON = `{
-	"order_uid": "b563feb7b2b84b6test",
-	"track_number": "WBILMTESTTRACK",
-	"entry": "WBIL",
-	"delivery": {
-	  "name": "Test Testov",
-	  "phone": "+9720000000",
-	  "zip": "2639809",
-	  "city": "Kiryat Mozkin",
-	  "address": "Ploshad Mira 15",
-	  "region": "Kraiot",
-	  "email": "test@gmail.com"
-	},
-	"payment": {
-	  "transaction": "b563feb7b2b84b6test",
-	  "request_id": "",
-	  "currency": "USD",
-	  "provider": "wbpay",
-	  "amount": 1817,
-	  "payment_dt": 1637907727,
-	  "bank": "alpha",
-	  "delivery_cost": 1500,
-	  "goods_total": 317,
-	  "custom_fee": 0
-	},
-	"items": [
-	  {
-		"chrt_id": 9934930,
-		"track_number": "WBILMTESTTRACK",
-		"price": 453,
-		"rid": "ab4219087a764ae0btest",
-		"name": "Mascaras",
-		"sale": 30,
-		"size": "0",
-		"total_price": 317,
-		"nm_id": 2389212,
-		"brand": "Vivienne Sabo",
-		"status": 202
-	  }
-	],
-	"locale": "en",
-	"internal_signature": "",
-	"customer_id": "test",
-	"delivery_service": "meest",
-	"shardkey": "9",
-	"sm_id": 99,
-	"date_created": "2021-11-26T06:22:19Z",
-	"oof_shard": "1"
-  }
-`
+var (
+	ordersHandled = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "myapp_orders_handled_total",
+		Help: "The total number of orders handled",
+	})
+	ordersWriteDb = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "myapp_orders_write_db",
+		Help: "The number of orders write to db",
+	})
+	ordersReadDb = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "myapp_orders_read_db",
+		Help: "The number of orders read to db",
+	})
+	ordersErrors = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "myapp_orders_errors",
+		Help: "The number of orders with errors",
+	})
+	ordersInMem = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "myapp_orders_inmemcache",
+		Help: "The number of orders in memory cache",
+	})
+)
+var NATSHOST = "nats://nats:4223"
+var PUBTOPIC = "TESTING"
+
+type OrderWithKey struct {
+	Key Key
+	Val data.RawOrderData
+}
+type Key string
+
+func (k *Key) Get() string {
+	return string(*k)
+}
+func (k *Key) Set(s string) {
+	*k = Key(s)
+}
+func (k *Key) Generate() {
+	k.Set(fmt.Sprintf("%d", time.Now().UnixNano()))
+}
 
 func main() {
-	newRawOrder := &rawOrderData{}
-	json.Unmarshal([]byte(TESTJSON), newRawOrder)
-	fmt.Println(newRawOrder)
+	fmt.Println("INIT FROM DB")
 
+	initmemchan := make(chan OrderWithKey, 10)
+	go selectOrders(initmemchan)
+	err := InitNatsSubscriber(NATSHOST)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("INITED")
+	natschan := make(chan *nats.Msg, 20)
+	err = NatsSubscribe(NatsSubscribeOpts{
+		Topic:   PUBTOPIC,
+		MsgChan: natschan,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("SUBSCRIBED")
+
+	//											   initmemchan -> |(fin)
+	//															  |
+	//natschan -> msgdatachan -> orderschan |(fout) -> memchan -> |(fin) -> memwritechan (inmemcacheConsumer)
+	//										|
+	//									  	|(fout) -> encodechan -> gobchan (databaseConsumer)
+	msgdatachan := TranformChan(natschan, MessageToByteSlice, 10)
+	orderschan := TranformChan(msgdatachan, ByteSliceToOrderData, 10)
+
+	memchan := make(chan OrderWithKey, 10)
+	encodechan := make(chan OrderWithKey, 10)
+	ChanFanOut(orderschan, []chan OrderWithKey{
+		memchan,
+		encodechan,
+	})
+	var m sync.Mutex
+	inmem := make(map[string]data.RawOrderData)
+	inmemkeys := make([]string, 0)
+	getInmemById := func(id string) (data.RawOrderData, bool) {
+		m.Lock()
+		v, ok := inmem[id]
+		m.Unlock()
+		return v, ok
+	}
+	updateInmemOrder := func(d OrderWithKey) {
+		ordersInMem.Inc()
+		m.Lock()
+		defer m.Unlock()
+		inmem[d.Key.Get()] = d.Val
+		inmemkeys = append(inmemkeys, d.Key.Get())
+	}
+
+	memwritechan := make(chan OrderWithKey, 10)
+	ChanFanIn(
+		[]chan OrderWithKey{
+			memchan,
+			initmemchan,
+		},
+		memwritechan,
+	)
+	ChanConsumer(memwritechan, func(d OrderWithKey) error {
+		updateInmemOrder(d)
+		return nil
+	})
+	gobchan := TranformChan(encodechan, OrderDataToGob, 10)
+	ChanConsumer(gobchan, func(d GobWithKey) error {
+		return insertOrder(d.Key.Get(), string(d.Val))
+	})
+
+	memLenHandler := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		m.Lock()
+
+		var l int = len(inmem)
+		m.Unlock()
+		w.Write([]byte(fmt.Sprintf("{\"mem_len\": %d}", l)))
+	}
+	memLastHandler := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		m.Lock()
+		var s string
+		if len(inmemkeys) > 10 {
+			s = strings.Join(inmemkeys[len(inmemkeys)-10:], "\",\"")
+		}
+		m.Unlock()
+		w.Write([]byte(fmt.Sprintf("[\"%s\"]", s)))
+	}
+
+	Serve := func(w http.ResponseWriter, r *http.Request) {
+		var h http.Handler
+		var id string
+
+		p := r.URL.Path
+
+		switch {
+		case match(p, "/mem_len"):
+			h = get(memLenHandler)
+		case match(p, "/mem_last"):
+			h = get(memLastHandler)
+		case match(p, "/order/+", &id):
+			h = get(
+				func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					res, ok := getInmemById(id)
+					if !ok {
+						http.Error(w, "404 resource not found", http.StatusNotFound)
+						return
+					}
+					b, err := json.Marshal(&res)
+					if err != nil {
+						http.Error(w, "500 internal server error", http.StatusInternalServerError)
+						return
+					}
+					w.Write(b)
+				})
+		default:
+			http.NotFound(w, r)
+			return
+		}
+		h.ServeHTTP(w, r)
+	}
+	http.HandleFunc("/", Serve)
+	http.Handle("/metrics", promhttp.Handler())
+	if err := http.ListenAndServe(":8090", nil); err != nil {
+		log.Fatal(err)
+	}
 }
