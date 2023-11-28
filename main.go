@@ -14,58 +14,42 @@ import (
 	"time"
 
 	data "github.com/fops9311/wbl0_231124/data"
-	"github.com/nats-io/nats.go"
+	stan "github.com/nats-io/stan.go"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-var (
-	ordersHandled = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "myapp_orders_handled_total",
-		Help: "The total number of orders handled",
-	})
-	ordersWriteDb = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "myapp_orders_write_db",
-		Help: "The number of orders write to db",
-	})
-	ordersReadDb = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "myapp_orders_read_db",
-		Help: "The number of orders read to db",
-	})
-	ordersErrors = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "myapp_orders_errors",
-		Help: "The number of orders with errors",
-	})
-	ordersInMem = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "myapp_orders_inmemcache",
-		Help: "The number of orders in memory cache",
-	})
-)
-var NATSHOST = "nats://nats:4223"
-var PUBTOPIC = "TESTING"
-
+// данные о заказе с ключем
 type OrderWithKey struct {
 	Key Key
 	Val data.RawOrderData
 }
+
+// ключ служит для хранения в бд и кэше
 type Key string
 
+// получить значение
 func (k *Key) Get() string {
 	return string(*k)
 }
+
+// установить значение
 func (k *Key) Set(s string) {
 	*k = Key(s)
 }
+
+// сгенерировать ключ
 func (k *Key) Generate() {
 	k.Set(fmt.Sprintf("%d", time.Now().UnixNano()))
 }
 
 func main() {
+	//инициализация из env
+	InitGlobalVarsFromEnv()
+	//инизацилация таблице в бд
+	fmt.Println("INIT TABLE RESULT", initTable())
 	fmt.Println("INIT FROM DB")
-
+	//инизациализация подписки на топик
 	initmemchan := make(chan OrderWithKey, 10)
 	go selectOrders(initmemchan)
 	err := InitNatsSubscriber(NATSHOST)
@@ -73,7 +57,7 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("INITED")
-	natschan := make(chan *nats.Msg, 20)
+	natschan := make(chan *stan.Msg, 20)
 	err = NatsSubscribe(NatsSubscribeOpts{
 		Topic:   PUBTOPIC,
 		MsgChan: natschan,
@@ -82,13 +66,15 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("SUBSCRIBED")
-
+	//формирование конвейера
 	//											   initmemchan -> |(fin)
 	//															  |
 	//natschan -> msgdatachan -> orderschan |(fout) -> memchan -> |(fin) -> memwritechan (inmemcacheConsumer)
 	//										|
 	//									  	|(fout) -> encodechan -> gobchan (databaseConsumer)
+	//преобразование каналов
 	msgdatachan := TranformChan(natschan, MessageToByteSlice, 10)
+
 	orderschan := TranformChan(msgdatachan, ByteSliceToOrderData, 10)
 
 	memchan := make(chan OrderWithKey, 10)
@@ -130,37 +116,71 @@ func main() {
 	ChanConsumer(gobchan, func(d GobWithKey) error {
 		return insertOrder(d.Key.Get(), string(d.Val))
 	})
-
-	memLenHandler := func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		m.Lock()
-
-		var l int = len(inmem)
-		m.Unlock()
-		w.Write([]byte(fmt.Sprintf("{\"mem_len\": %d}", l)))
-	}
-	memLastHandler := func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		m.Lock()
-		var s string
-		if len(inmemkeys) > 10 {
-			s = strings.Join(inmemkeys[len(inmemkeys)-10:], "\",\"")
-		}
-		m.Unlock()
-		w.Write([]byte(fmt.Sprintf("[\"%s\"]", s)))
-	}
-
+	//http сервер
 	Serve := func(w http.ResponseWriter, r *http.Request) {
 		var h http.Handler
 		var id string
+		var pageId int
 
 		p := r.URL.Path
 
 		switch {
 		case match(p, "/mem_len"):
-			h = get(memLenHandler)
-		case match(p, "/mem_last"):
-			h = get(memLastHandler)
+			h = get(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				m.Lock()
+
+				var l int = len(inmem)
+				m.Unlock()
+				w.Write([]byte(fmt.Sprintf("{\"mem_len\": %d}", l)))
+			})
+		case match(p, "/order_pages/last"):
+			h = get(
+				func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+
+					m.Lock()
+					defer m.Unlock()
+					var pageVolume int = 50
+					len := len(inmemkeys)
+					var lastPage int = len/pageVolume + 1
+					pageId = lastPage
+					page := make([]string, pageVolume)
+					if (pageId)*pageVolume < len {
+						page = inmemkeys[(pageId-1)*pageVolume : (pageId)*pageVolume]
+					} else {
+						page = inmemkeys[(pageId-1)*pageVolume:]
+					}
+					s := strings.Join(page, "\",\"")
+					w.Write([]byte(fmt.Sprintf("[\"%s\"]", s)))
+				})
+		case match(p, "/order_pages/+", &pageId):
+			h = get(
+				func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+
+					m.Lock()
+					defer m.Unlock()
+					var pageVolume int = 50
+					len := len(inmemkeys)
+					var lastPage int = len/pageVolume + 1
+					if pageId > lastPage {
+						http.Error(w, "404 resource not found", http.StatusNotFound)
+						return
+					}
+					if pageId < 1 {
+						http.Error(w, "400 bad request", http.StatusBadRequest)
+						return
+					}
+					page := make([]string, pageVolume)
+					if (pageId)*pageVolume < len {
+						page = inmemkeys[(pageId-1)*pageVolume : (pageId)*pageVolume]
+					} else {
+						page = inmemkeys[(pageId-1)*pageVolume:]
+					}
+					s := strings.Join(page, "\",\"")
+					w.Write([]byte(fmt.Sprintf("[\"%s\"]", s)))
+				})
 		case match(p, "/order/+", &id):
 			h = get(
 				func(w http.ResponseWriter, r *http.Request) {

@@ -10,16 +10,35 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const (
-	host     = "demo_postgres"
-	port     = 5432
-	user     = "postgres"
-	password = "password"
-	dbname   = "demo1"
-)
+func initTable() error {
+	query := `    
+	CREATE TABLE IF NOT EXISTS public.orders2
+	(
+		id text NOT NULL,
+		data bytea,
+		PRIMARY KEY (id)
+	);
+	
+	ALTER TABLE IF EXISTS public.orders2
+		OWNER to postgres;`
 
+	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDBNAME)
+
+	db, err := sql.Open("postgres", psqlconn)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	_, err = db.Exec(query)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func insertOrder(key string, data string) error {
-	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDBNAME)
 
 	db, err := sql.Open("postgres", psqlconn)
 	if err != nil {
@@ -49,7 +68,7 @@ func selectOrders(c chan OrderWithKey) error {
 		isOrderTypeRegistered = true
 	}
 
-	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDBNAME)
 
 	db, err := sql.Open("postgres", psqlconn)
 	if err != nil {

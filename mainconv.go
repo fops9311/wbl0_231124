@@ -8,9 +8,10 @@ import (
 	"log"
 
 	data "github.com/fops9311/wbl0_231124/data"
-	"github.com/nats-io/nats.go"
+	stan "github.com/nats-io/stan.go"
 )
 
+// функция для вызова горутин преобразования каналов
 func TranformChan[T1 any, T2 any](in chan T1, f func(T1) (T2, error), size int) chan T2 {
 	result := make(chan T2, size)
 
@@ -28,6 +29,8 @@ func TranformChan[T1 any, T2 any](in chan T1, f func(T1) (T2, error), size int) 
 
 	return result
 }
+
+// функция для вызова горутин fanout
 func ChanFanOut[T1 any](in chan T1, out []chan T1) {
 	go func() {
 		for t := range in {
@@ -37,6 +40,8 @@ func ChanFanOut[T1 any](in chan T1, out []chan T1) {
 		}
 	}()
 }
+
+// функция для вызова горутин fanin
 func ChanFanIn[T1 any](in []chan T1, out chan T1) {
 	for i := range in {
 		ind := i
@@ -47,6 +52,8 @@ func ChanFanIn[T1 any](in []chan T1, out chan T1) {
 		}()
 	}
 }
+
+// функция для вызова горутин потребителя канала
 func ChanConsumer[T1 any](in chan T1, f func(T1) error) {
 	go func() {
 		for c := range in {
@@ -61,7 +68,7 @@ func ChanConsumer[T1 any](in chan T1, f func(T1) error) {
 
 var ErrGotNilMessage = errors.New("got nil message")
 
-func MessageToByteSlice(msg *nats.Msg) ([]byte, error) {
+func MessageToByteSlice(msg *stan.Msg) ([]byte, error) {
 	ordersHandled.Inc()
 	if msg == nil {
 		return []byte{}, ErrGotNilMessage
@@ -82,6 +89,7 @@ func ByteSliceToOrderData(b []byte) (OrderWithKey, error) {
 	return order, nil
 }
 
+// флаг регистрации gob
 var isOrderTypeRegistered = false
 
 func OrderDataToGob(d OrderWithKey) (GobWithKey, error) {

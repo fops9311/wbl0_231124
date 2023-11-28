@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +12,7 @@ import (
 	data "github.com/fops9311/wbl0_231124/data"
 
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/stan.go"
 )
 
 var NATSHOST = "nats://127.0.0.1:4223"
@@ -30,6 +32,17 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
+	// Connect to a server
+
+	sc, err := stan.Connect("TESTCLUSTER", "clientID2", stan.NatsConn(nc),
+		stan.SetConnectionLostHandler(func(_ stan.Conn, reason error) {
+			log.Fatalf("Connection lost, reason: %v", reason)
+		}))
+	if err != nil {
+		log.Fatalf("Can't connect: %v.\nMake sure a NATS Streaming Server is running at: %s", err, NATSHOST)
+	}
+
 	// Simple Publisher
 	func() {
 
@@ -50,7 +63,8 @@ func main() {
 				if err != nil {
 					fmt.Println(err)
 				}
-				nc.Publish(PUBTOPIC, b)
+				sc.Publish(PUBTOPIC, b)
+				fmt.Println(d.DateCreated, "SEND")
 			}
 		}
 

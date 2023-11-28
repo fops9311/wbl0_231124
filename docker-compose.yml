@@ -3,12 +3,11 @@ version: '2.1'
 networks:
   monitor-net:
     driver: bridge
-
 volumes:
     prometheus_data: {}
     grafana_data: {}
-    postgres: {}
-    pgadmin: {}
+    postgres_data: {}
+    pgadmin_data: {}
 
 services:
   postgres:
@@ -19,7 +18,7 @@ services:
       POSTGRES_PASSWORD: "password"
       PGDATA: "/data/postgres"
     volumes:
-       - postgres:/data/postgres
+       - postgres_data:/data/postgres
        - ./docker_postgres_init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
     ports:
       - "5432:5432"
@@ -40,7 +39,7 @@ services:
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     volumes:
-       - pgadmin:/var/lib/pgadmin
+       - pgadmin_data:/var/lib/pgadmin
        - ./docker_pgadmin_servers.json:/pgadmin4/servers.json
     ports:
       - "15433:80"
@@ -51,6 +50,8 @@ services:
     restart: unless-stopped
     networks:
       - monitor-net
+    depends_on:
+      - postgres
     
   nats:
     image: nats-streaming:latest
@@ -60,6 +61,7 @@ services:
     command:
       - '-p=4223'
       - '-m=8223'
+      - '-cid=TESTCLUSTER'
     expose:
       - 4223
       - 8223
@@ -140,23 +142,6 @@ services:
     labels:
       org.label-schema.group: "monitoring"
 
-  cadvisor:
-    image: gcr.io/google-containers/cadvisor:v0.34.0
-    container_name: cadvisor
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker:/var/lib/docker:ro
-      #- /cgroup:/cgroup:ro #doesn't work on MacOS only for Linux
-    restart: unless-stopped
-    expose:
-      - 8080
-    networks:
-      - monitor-net
-    labels:
-      org.label-schema.group: "monitoring"
-
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -170,36 +155,8 @@ services:
     restart: unless-stopped
     expose:
       - 3000
-    networks:
-      - monitor-net
-    labels:
-      org.label-schema.group: "monitoring"
-
-  pushgateway:
-    image: prom/pushgateway:v1.2.0
-    container_name: pushgateway
-    restart: unless-stopped
-    expose:
-      - 9091
-    networks:
-      - monitor-net
-    labels:
-      org.label-schema.group: "monitoring"
-
-  caddy:
-    image: stefanprodan/caddy
-    container_name: caddy
     ports:
       - "3000:3000"
-      - "9090:9090"
-      - "9093:9093"
-      - "9091:9091"
-    volumes:
-      - ./caddy:/etc/caddy
-    environment:
-      - ADMIN_USER=${ADMIN_USER}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-    restart: unless-stopped
     networks:
       - monitor-net
     labels:

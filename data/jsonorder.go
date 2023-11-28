@@ -1,59 +1,59 @@
 package data
-//GENERATED json items data
-type RawItemsData struct{
-	Brand string `json:"brand"`
-	TotalPrice int `json:"total_price"`
-	Size string `json:"size"`
-	Sale int `json:"sale"`
-	Name string `json:"name"`
-	Rid string `json:"rid"`
-	TrackNumber string `json:"track_number"`
-	Status int `json:"status"`
-	NmId int `json:"nm_id"`
-	Price int `json:"price"`
-	ChrtId int `json:"chrt_id"`
+//GENERATED json payment data
+type RawPaymentData struct{
+	Provider string `json:"provider"`
+	Currency string `json:"currency"`
+	DeliveryCost int `json:"delivery_cost"`
+	RequestId string `json:"request_id"`
+	Transaction string `json:"transaction"`
+	CustomFee int `json:"custom_fee"`
+	GoodsTotal int `json:"goods_total"`
+	Bank string `json:"bank"`
+	PaymentDt int `json:"payment_dt"`
+	Amount int `json:"amount"`
 LocalID string `json:"-"`
 }
 //GENERATED json delivery data
 type RawDeliveryData struct{
-	Address string `json:"address"`
-	City string `json:"city"`
 	Zip string `json:"zip"`
 	Phone string `json:"phone"`
 	Name string `json:"name"`
 	Email string `json:"email"`
 	Region string `json:"region"`
+	Address string `json:"address"`
+	City string `json:"city"`
 LocalID string `json:"-"`
 }
-//GENERATED json payment data
-type RawPaymentData struct{
-	CustomFee int `json:"custom_fee"`
-	DeliveryCost int `json:"delivery_cost"`
-	PaymentDt int `json:"payment_dt"`
-	Amount int `json:"amount"`
-	Currency string `json:"currency"`
-	RequestId string `json:"request_id"`
-	GoodsTotal int `json:"goods_total"`
-	Bank string `json:"bank"`
-	Provider string `json:"provider"`
-	Transaction string `json:"transaction"`
+//GENERATED json items data
+type RawItemsData struct{
+	Sale int `json:"sale"`
+	Price int `json:"price"`
+	ChrtId int `json:"chrt_id"`
+	Brand string `json:"brand"`
+	Name string `json:"name"`
+	Rid string `json:"rid"`
+	TrackNumber string `json:"track_number"`
+	Status int `json:"status"`
+	NmId int `json:"nm_id"`
+	TotalPrice int `json:"total_price"`
+	Size string `json:"size"`
 LocalID string `json:"-"`
 }
 //GENERATED json Order data
 type RawOrderData struct{
-	OrderUid string `json:"order_uid"`
-	SmId int `json:"sm_id"`
 	Shardkey string `json:"shardkey"`
-	Payment RawPaymentData `json:"payment"`
-	Delivery RawDeliveryData `json:"delivery"`
-	TrackNumber string `json:"track_number"`
-	DateCreated string `json:"date_created"`
-	DeliveryService string `json:"delivery_service"`
-	CustomerId string `json:"customer_id"`
+	Locale string `json:"locale"`
 	Items []RawItemsData `json:"items"`
-	Entry string `json:"entry"`
+	Delivery RawDeliveryData `json:"delivery"`
+	DateCreated string `json:"date_created"`
+	CustomerId string `json:"customer_id"`
 	InternalSignature string `json:"internal_signature"`
 	OofShard string `json:"oof_shard"`
-	Locale string `json:"locale"`
+	SmId int `json:"sm_id"`
+	Payment RawPaymentData `json:"payment"`
+	Entry string `json:"entry"`
+	DeliveryService string `json:"delivery_service"`
+	TrackNumber string `json:"track_number"`
+	OrderUid string `json:"order_uid"`
 LocalID string `json:"-"`
 }
