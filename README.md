@@ -42,3 +42,21 @@ go generate
 требования: linux,docker,docker-compose
 
 для работы на windows потребуется изменить директивы generate.
+
+## Publisher
+go run ./testers/publisher/.  
+
+## STEP 1
+[STEP 1](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/1%20order_pages_last.png?raw=true)
+## STEP 2
+[STEP 2](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/2%20new%20orders%20send.png)
+## STEP 3
+[STEP 3](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/3%20new%20orders%20on%20server.png)
+## STEP 4
+[STEP 4](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/4%20new%20orders%20when%20server%20stopped.png)
+## STEP 5
+[STEP 5](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/5%20new%20orders%20reappear%20when%20started.png)
+## STEP 6
+[STEP 6](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/6%20individual%20order.png)
+## STEP 7
+[STEP 7](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/7%20grafana%20orders.png)
