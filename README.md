@@ -2,22 +2,32 @@
 ## HTTP 
 * сервер доступен на порту 8090 по умолчанию
 * Эндпоинты:
+
 /mem_len - GET JSON MEMCACHE LEN (TOTAL)
+
 /order_pages/last - GET JSON ARRAY OF IDs ON LAST PAGE
+
 /order_pages/:id - GET JSON ARRAY OF IDs ON PAGE {:id}
+
 /order/:id - GET ORDER JSON
+
 
 ## NATS
 * Микросервис слушает топик nats "TESTING"
 * В случае получения в по топику данных в формате JSON, они сохраняются в мапе и в базе postgresql.
 
 * Схема конвейера:
-
+```
 												   initmemchan -> |(fin)
+
 																  |
+
 	natschan -> msgdatachan -> orderschan   |(fout) -> memchan -> |(fin) -> memwritechan (inmemcacheConsumer)
+
 											|
+
 										  	|(fout) -> encodechan -> gobchan (databaseConsumer)
+```
 
 * natschan - chan *nats.Msg в который транслируются все сообщения из топика
 * msgdatachan - chan []byte в который попадают только не пустые payload
