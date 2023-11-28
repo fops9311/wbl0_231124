@@ -98,6 +98,8 @@ func selectOrders(c chan OrderWithKey) error {
 		}
 		ordersReadDb.Inc()
 		orderwk := OrderWithKey{Val: order}
+
+		fmt.Println(string(r.Data))
 		orderwk.Key.Set(r.Key)
 		c <- orderwk
 	}

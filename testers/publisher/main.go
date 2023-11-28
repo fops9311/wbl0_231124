@@ -64,7 +64,7 @@ func main() {
 					fmt.Println(err)
 				}
 				sc.Publish(PUBTOPIC, b)
-				fmt.Println(d.DateCreated, "SEND")
+				fmt.Println(d.DateCreated, "SEND", len(b))
 			}
 		}
 

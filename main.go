@@ -146,6 +146,10 @@ func main() {
 					var lastPage int = len/pageVolume + 1
 					pageId = lastPage
 					page := make([]string, pageVolume)
+					if len == 0 {
+						http.Error(w, "404 resource not found", http.StatusNotFound)
+						return
+					}
 					if (pageId)*pageVolume < len {
 						page = inmemkeys[(pageId-1)*pageVolume : (pageId)*pageVolume]
 					} else {
@@ -164,6 +168,10 @@ func main() {
 					var pageVolume int = 50
 					len := len(inmemkeys)
 					var lastPage int = len/pageVolume + 1
+					if len == 0 {
+						http.Error(w, "404 resource not found", http.StatusNotFound)
+						return
+					}
 					if pageId > lastPage {
 						http.Error(w, "404 resource not found", http.StatusNotFound)
 						return

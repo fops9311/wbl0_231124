@@ -93,7 +93,7 @@ func ByteSliceToOrderData(b []byte) (OrderWithKey, error) {
 var isOrderTypeRegistered = false
 
 func OrderDataToGob(d OrderWithKey) (GobWithKey, error) {
-	order := data.RawOrderData{}
+	order := d.Val
 	if !isOrderTypeRegistered {
 		gob.Register(order)
 		isOrderTypeRegistered = true
