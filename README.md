@@ -48,22 +48,29 @@ go run ./testers/publisher/.
 
 ## STEP 1
 Микросервис запущен, отображение последних заказов
+
 ![STEP 1](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/1%20order_pages_last.png)
 ## STEP 2
 Тестовый publisher отправил новые сообщения
+
 ![STEP 2](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/2%20new%20orders%20send.png)
 ## STEP 3
 Новые заказы отобразились на сервере
+
 ![STEP 3](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/3%20new%20orders%20on%20server.png)
 ## STEP 4
 Микросервис остановлен, после чего тестовый publisher отправил еще сообщения
+
 ![STEP 4](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/4%20new%20orders%20when%20server%20stopped.png)
 ## STEP 5
 Микросервис запущен, заказы не потерялись, а были добавлены после запуска микросервиса
+
 ![STEP 5](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/5%20new%20orders%20reappear%20when%20started.png)
 ## STEP 6
 Демонстрация отдельного заказа
+
 ![STEP 6](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/6%20individual%20order.png)
 ## STEP 7
 Демонстрация отображения данных на мониторинге prometheus+grafana и соотвествие значению по http /mem_len
+
 ![STEP 7](https://github.com/fops9311/wbl0_231124/blob/main/screenshots/7%20grafana%20orders.png)
