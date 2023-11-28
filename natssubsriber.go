@@ -65,10 +65,12 @@ func NatsSubscribe(opts NatsSubscribeOpts) error {
 	if err := n.Validate(); err != nil {
 		return err
 	}
-	sub, _ := n.sc.Subscribe(opts.Topic, func(m *stan.Msg) {
+	sub, err := n.sc.Subscribe(opts.Topic, func(m *stan.Msg) {
 		opts.MsgChan <- m
 	}, stan.DurableName("my-durable"))
-
+	if err != nil {
+		return err
+	}
 	n.subs[opts.Topic] = sub
 	return nil
 }
