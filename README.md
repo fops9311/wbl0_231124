@@ -18,15 +18,11 @@
 
 * Схема конвейера:
 ```
-												   initmemchan -> |(fin)
+initmemchan -> |(fin)...
 
-																  |
+natschan -> msgdatachan -> orderschan   |(fout) -> memchan -> |(fin) -> memwritechan (inmemcacheConsumer)
 
-	natschan -> msgdatachan -> orderschan   |(fout) -> memchan -> |(fin) -> memwritechan (inmemcacheConsumer)
-
-											|
-
-										  	|(fout) -> encodechan -> gobchan (databaseConsumer)
+...|(fout) -> encodechan -> gobchan (databaseConsumer)
 ```
 
 * natschan - chan *nats.Msg в который транслируются все сообщения из топика
