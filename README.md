@@ -9,7 +9,7 @@
 
 /order_pages/:id - GET JSON ARRAY OF IDs ON PAGE {:id}
 
-/order/:id - GET ORDER JSON
+/order/:id - GET JSON ORDER {:id}
 
 
 ## NATS
@@ -38,5 +38,7 @@ natschan -> msgdatachan -> orderschan   |(fout) -> memchan -> |(fin) -> memwrite
 
 ## Запуск
 go generate
+
 требования: linux,docker,docker-compose
+
 для работы на windows потребуется изменить директивы generate.
