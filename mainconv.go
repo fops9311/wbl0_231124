@@ -101,8 +101,3 @@ func OrderDataToGob(d OrderWithKey) (GobWithKey, error) {
 	g.Key.Set(d.Key.Get())
 	return g, nil
 }
-
-type GobWithKey struct {
-	Key Key
-	Val []byte
-}

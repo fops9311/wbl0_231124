@@ -8,37 +8,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
-	data "github.com/fops9311/wbl0_231124/data"
 	stan "github.com/nats-io/stan.go"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
-
-// данные о заказе с ключем
-type OrderWithKey struct {
-	Key Key
-	Val data.RawOrderData
-}
-
-// ключ служит для хранения в бд и кэше
-type Key string
-
-// получить значение
-func (k *Key) Get() string {
-	return string(*k)
-}
-
-// установить значение
-func (k *Key) Set(s string) {
-	*k = Key(s)
-}
-
-// сгенерировать ключ
-func (k *Key) Generate() {
-	k.Set(fmt.Sprintf("%d", time.Now().UnixNano()))
-}
 
 func main() {
 	//инициализация из env
