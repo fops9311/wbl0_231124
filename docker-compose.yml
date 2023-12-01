@@ -69,6 +69,16 @@ services:
       - monitor-net
     labels:
       org.label-schema.group: "monitoring"
+  bot:
+    image:    wb_tgbot_demo:latest
+    restart: unless-stopped
+    container_name: bot
+    networks:
+      - monitor-net
+    labels:
+      org.label-schema.group: "monitoring"
+    depends_on:
+      - micro
   micro:
     image: wb_nats_demo:latest
     container_name: micro
