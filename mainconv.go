@@ -89,15 +89,8 @@ func ByteSliceToOrderData(b []byte) (OrderWithKey, error) {
 	return order, nil
 }
 
-// флаг регистрации gob
-var isOrderTypeRegistered = false
-
 func OrderDataToGob(d OrderWithKey) (GobWithKey, error) {
 	order := d.Val
-	if !isOrderTypeRegistered {
-		gob.Register(order)
-		isOrderTypeRegistered = true
-	}
 	var buff bytes.Buffer
 	enc := gob.NewEncoder(&buff)
 	err := enc.Encode(&order)

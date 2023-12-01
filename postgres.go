@@ -11,7 +11,7 @@ import (
 )
 
 func initTable() error {
-	query := `    
+	query := `
 	CREATE TABLE IF NOT EXISTS public.orders2
 	(
 		id text NOT NULL,
@@ -62,11 +62,6 @@ type Record struct {
 }
 
 func selectOrders(c chan OrderWithKey) error {
-
-	if !isOrderTypeRegistered {
-		gob.Register(data.RawOrderData{})
-		isOrderTypeRegistered = true
-	}
 
 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDBNAME)
 

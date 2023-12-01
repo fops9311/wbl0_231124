@@ -97,6 +97,11 @@ func main() {
 
 	var data interface{}
 	json.Unmarshal([]byte(TESTJSON), &data)
+	structs += `
+import "encoding/gob"
+
+func init() { gob.Register(RawOrderData{}) }
+	`
 	c(data, "Order")
 	structs = strings.ReplaceAll(structs, "float64", "int")
 	os.WriteFile(filepath.Join(".", "data", "jsonorder.go"), []byte(structs), 0644)
