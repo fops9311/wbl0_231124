@@ -68,6 +68,9 @@ func ChanConsumer[T1 any](in chan T1, f func(T1) error) {
 
 var ErrGotNilMessage = errors.New("got nil message")
 
+// функция для преобразования сообщения в срез байт
+//
+// вытаскивает данные из сообщения
 func MessageToByteSlice(msg *stan.Msg) ([]byte, error) {
 	ordersHandled.Inc()
 	if msg == nil {
@@ -76,6 +79,10 @@ func MessageToByteSlice(msg *stan.Msg) ([]byte, error) {
 	//fmt.Println(strings.ToLower("MessageToByteSlice: "), len(msg.Data))
 	return msg.Data, nil
 }
+
+// функция для преобразования из json во внутренний тип
+//
+// здесь данные получают уникальный идентификатор, который генерируется на основе метки времени
 func ByteSliceToOrderData(b []byte) (OrderWithKey, error) {
 	var d *data.RawOrderData = &data.RawOrderData{}
 	err := json.Unmarshal(b, d)
@@ -89,6 +96,9 @@ func ByteSliceToOrderData(b []byte) (OrderWithKey, error) {
 	return order, nil
 }
 
+// функция для преобразования из внутреннего типа в gob
+//
+// именно в таком формате данные хранятся в БД
 func OrderDataToGob(d OrderWithKey) (GobWithKey, error) {
 	order := d.Val
 	var buff bytes.Buffer

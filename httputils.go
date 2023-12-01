@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+//Набор утилит для организации http сервера
+//Мне показался такой подход интересным, плюс он довольно быстрый согласно бенчмаркам
+
 // get takes a HandlerFunc and wraps it to only allow the GET method
 func get(h http.HandlerFunc) http.HandlerFunc {
 	return allowMethod(h, "GET")

@@ -7,17 +7,20 @@ import (
 	"strings"
 )
 
+// параметры http запроса
 type HttpRequestParams struct {
 	PageId  int
 	OrderId string
 }
 
+// хэндлер возвращает json с общим количеством сохраненных значений
 func HandleMemLen(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var l int = len(StorageGetKeys())
 	w.Write([]byte(fmt.Sprintf("{\"mem_len\": %d}", l)))
 }
 
+// хэндлер возвращает json отображение запрошенного заказа
 func HandleGetOrder(p HttpRequestParams) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -34,6 +37,8 @@ func HandleGetOrder(p HttpRequestParams) func(w http.ResponseWriter, r *http.Req
 		w.Write(b)
 	}
 }
+
+// хэндлер возвращает json страницы заказов pagination
 func HandleGetOrderPage(p HttpRequestParams) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -45,6 +50,8 @@ func HandleGetOrderPage(p HttpRequestParams) func(w http.ResponseWriter, r *http
 		w.Write(body)
 	}
 }
+
+// хэлпер функция для получения страницы. Если страницы не существует, возвращает код http отличный от 200
 func GetPage(pageId int) ([]byte, int) {
 	keys := StorageGetKeys()
 	var pageVolume int = 50

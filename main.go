@@ -1,4 +1,5 @@
 //go:generate go run ./scripts/analize_struct/.
+//go:generate gofmt -w ./data/jsonorder.go
 //go:generate docker build -t wb_nats_demo:latest .
 //go:generate docker-compose down
 //go:generate docker-compose up --remove-orphans -d
@@ -83,6 +84,10 @@ func main() {
 		switch {
 		case match(p, "/mem_len"):
 			h = get(HandleMemLen)
+		case match(p, "/signature"):
+			h = get(func(w http.ResponseWriter, r *http.Request) {
+				w.Write([]byte("СОЗДАНО АЛЕКСЕЕМ ЩЕРБАКОВЫМ. 2023г. 30 годиков. Version 0.0.1"))
+			})
 		case match(p, "/order_pages/last"):
 			h = get(HandleGetOrderPage(HttpRequestParams{PageId: -1}))
 		case match(p, "/order_pages/+", &pageId):
