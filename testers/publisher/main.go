@@ -15,7 +15,7 @@ import (
 	"github.com/nats-io/stan.go"
 )
 
-var NATSHOST = "nats://127.0.0.1:4223"
+var NATSHOST = "nats://localhost:4223"
 var PUBTOPIC = "TESTING"
 var inmemcache = make(map[string][]byte)
 
@@ -51,7 +51,7 @@ func main() {
 			case <-sigs:
 				fmt.Println("INTERUPTED")
 				return
-			case <-time.NewTimer(time.Millisecond * 500).C:
+			case <-time.NewTimer(time.Millisecond * 1000).C:
 				//nanosecs--
 				if nanosecs < 10 {
 					os.Interrupt.Signal()
