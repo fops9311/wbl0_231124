@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	stan "github.com/nats-io/stan.go"
 
@@ -73,6 +76,7 @@ func main() {
 	gobchan := TranformChan(encodechan, OrderDataToGob, 10)
 	ChanConsumer(gobchan, func(d GobWithKey) error {
 		return insertOrder(d.Key.Get(), string(d.Val))
+		//return nil
 	})
 	//http сервер
 	Serve := func(w http.ResponseWriter, r *http.Request) {
@@ -100,9 +104,17 @@ func main() {
 		}
 		h.ServeHTTP(w, r)
 	}
-	http.Handle("/metrics", promhttp.Handler())
-	http.HandleFunc("/", Serve)
-	if err := http.ListenAndServe(":8090", nil); err != nil {
-		log.Fatal(err)
-	}
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		http.HandleFunc("/", Serve)
+		if err := http.ListenAndServe(":8090", nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
+	<-sigs
+	fmt.Println("closed")
+	closeDb()
 }

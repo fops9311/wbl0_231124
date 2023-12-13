@@ -80,6 +80,16 @@ func MessageToByteSlice(msg *stan.Msg) ([]byte, error) {
 	return msg.Data, nil
 }
 
+// функция для преобразования сообщения order
+func MessageToToOrderData(msg *stan.Msg) (OrderWithKey, error) {
+	ordersHandled.Inc()
+	if msg == nil {
+		return OrderWithKey{}, ErrGotNilMessage
+	}
+	//fmt.Println(strings.ToLower("MessageToByteSlice: "), len(msg.Data))
+	return ByteSliceToOrderData(msg.Data)
+}
+
 // функция для преобразования из json во внутренний тип
 //
 // здесь данные получают уникальный идентификатор, который генерируется на основе метки времени

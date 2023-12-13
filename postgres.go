@@ -37,16 +37,15 @@ func initTable() error {
 	}
 	return nil
 }
-func insertOrder(key string, data string) error {
+
+var db, err = func() (*sql.DB, error) {
 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDBNAME)
-
 	db, err := sql.Open("postgres", psqlconn)
-	if err != nil {
-		return err
-	}
+	return db, err
 
-	defer db.Close()
+}()
 
+func insertOrder(key string, data string) error {
 	insertDynStmt := `insert into "orders2"("id", "data") values($1, $2)`
 	_, err = db.Exec(insertDynStmt, key, data)
 	if err != nil {
@@ -61,16 +60,10 @@ type Record struct {
 	Data []byte
 }
 
+func closeDb() {
+	db.Close()
+}
 func selectOrders(c chan OrderWithKey) error {
-
-	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDBNAME)
-
-	db, err := sql.Open("postgres", psqlconn)
-	if err != nil {
-		return err
-	}
-
-	defer db.Close()
 
 	rows, err := db.Query("select * from \"orders2\"")
 	if err != nil {
@@ -94,7 +87,7 @@ func selectOrders(c chan OrderWithKey) error {
 		ordersReadDb.Inc()
 		orderwk := OrderWithKey{Val: order}
 
-		fmt.Println(string(r.Data))
+		//fmt.Println(string(r.Data))
 		orderwk.Key.Set(r.Key)
 		c <- orderwk
 	}

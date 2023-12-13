@@ -20,7 +20,6 @@ var PUBTOPIC = "TESTING"
 var inmemcache = make(map[string][]byte)
 
 func main() {
-
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -35,7 +34,7 @@ func main() {
 
 	// Connect to a server
 
-	sc, err := stan.Connect("TESTCLUSTER", "clientID2", stan.NatsConn(nc),
+	sc, err := stan.Connect("TESTCLUSTER", "clientID33", stan.NatsConn(nc),
 		stan.SetConnectionLostHandler(func(_ stan.Conn, reason error) {
 			log.Fatalf("Connection lost, reason: %v", reason)
 		}))
@@ -45,26 +44,24 @@ func main() {
 
 	// Simple Publisher
 	func() {
+		//variate data a bit
+		d.SmId = int(time.Now().UnixNano())
+		d.DateCreated = time.Now().Format("2006-01-02T15:04:05.999999999Z07:00")
+		b, err := json.Marshal(d)
+		if err != nil {
+			fmt.Println(err)
+		}
 
 		for nanosecs := 20000000; nanosecs > 10; nanosecs-- {
 			select {
 			case <-sigs:
 				fmt.Println("INTERUPTED")
 				return
-			case <-time.NewTimer(time.Millisecond * 1000).C:
+				//case <-time.NewTimer(time.Millisecond * 1).C:
+			default:
 				//nanosecs--
-				if nanosecs < 10 {
-					os.Interrupt.Signal()
-				}
-				//variate data a bit
-				d.SmId = int(time.Now().UnixNano())
-				d.DateCreated = time.Now().Format("2006-01-02T15:04:05.999999999Z07:00")
-				b, err := json.Marshal(d)
-				if err != nil {
-					fmt.Println(err)
-				}
 				sc.Publish(PUBTOPIC, b)
-				fmt.Println(d.DateCreated, "SEND", len(b))
+				//fmt.Println(d.DateCreated, "SEND", len(b))
 			}
 		}
 

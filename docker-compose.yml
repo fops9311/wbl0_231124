@@ -69,6 +69,10 @@ services:
       - monitor-net
     labels:
       org.label-schema.group: "monitoring"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
   bot:
     image:    wb_tgbot_demo:latest
     restart: unless-stopped
